@@ -33,7 +33,6 @@ async def verify_webhook(request: Request):
 @api.post("/webhook")
 async def receive_message(request: Request):
     data = await request.json()
-    print("Données reçues :", data)
 
     # Extraction du message texte
     try:
@@ -60,20 +59,33 @@ async def receive_message(request: Request):
     save_histories(histories)
     
     # Répondre à l'utilisateur via WhatsApp API
-    async with httpx.AsyncClient() as client:
-        await client.post(
-            f"https://graph.facebook.com/v18.0/{PHONE_NUMBER_ID}/messages",
-            headers={
-                "Authorization": f"Bearer {WHATSAPP_TOKEN}",
-                "Content-Type": "application/json"
-            },
-            json={
-                "messaging_product": "whatsapp",
-                "to": sender_id,
-                "type": "text",
-                "text": {"body": response}
-            }
-        )
+    if not response or not sender_id:
+        print("Erreur: Réponse ou ID de l'expéditeur manquant.")
+        return {"status": "error", "message": "Invalid response or sender ID"}
+
+    print("Response: ", response)
+    try:
+        async with httpx.AsyncClient() as client:
+            res = await client.post(
+                f"https://graph.facebook.com/v18.0/{PHONE_NUMBER_ID}/messages",
+                headers={
+                    "Authorization": f"Bearer {WHATSAPP_TOKEN}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "messaging_product": "whatsapp",
+                    "to": sender_id,
+                    "type": "text",
+                    "text": {"body": response}
+                }
+            )
+            if res.status_code != 200:
+                print("Erreur lors de l'envoi du message :", res.text)
+                return {"status": "error", "message": "Failed to send message"}
+    except Exception as e:
+        print("Exception lors de l'envoi du message :", e)
+        return {"status": "error", "message": str(e)}
+
     return {"status": "done"}
 
 
