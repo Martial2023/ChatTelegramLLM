@@ -40,6 +40,7 @@ async def receive_message(request: Request):
         entry = data["entry"][0]
         message = entry["changes"][0]["value"]["messages"][0]
         text = message["text"]["body"]
+        print("Text Message: ", text)
         sender_id = message["from"]
     except Exception as e:
         print("Message invalide :", e)
@@ -48,7 +49,7 @@ async def receive_message(request: Request):
     if sender_id not in histories:
         histories[sender_id] = [SYSTEM_PROMPT]
     
-    histories[sender_id].append({"role": "user", "content": message})
+    histories[sender_id].append({"role": "user", "content": text})
     response = ask_llama(histories[sender_id])
     histories[sender_id].append({"role": "assistant", "content": response})
 
