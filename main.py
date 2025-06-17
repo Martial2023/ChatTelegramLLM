@@ -12,7 +12,8 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 api = FastAPI()
 
-@api.get("/")
+@api.get("/", include_in_schema=False)
+@api.head("/", include_in_schema=False)
 async def root():
     return {"status": "Bot en ligne"}
 
