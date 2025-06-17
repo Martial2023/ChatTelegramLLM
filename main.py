@@ -3,11 +3,25 @@ from dotenv import load_dotenv
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 import os
 from utils import *
+from threading import Thread
+from fastapi import FastAPI
+import uvicorn
 
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
+api = FastAPI()
+
+@api.get("/")
+async def root():
+    return {"status": "Bot en ligne"}
+
+def run_api():
+    port = int(os.environ.get("PORT", 10000))
+    uvicorn.run(api, host="0.0.0.0", port=port)
+
 histories = load_histories()
+
 # 🚀 Commande /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text("Salut, comment puis-je t'aider?")
@@ -41,10 +55,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     except Exception as e:
         await update.message.reply_text("Une erreur s'est produite.")
     
+
+# Init Telegram bot
+def run_bot():
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("reset", reset))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    print("✅ Bot Telegram lancé.")
+    app.run_polling()
     
-app = ApplicationBuilder().token(BOT_TOKEN).build()
-app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("reset", reset))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-print("✅ Bot en cours d'exécution...")
-app.run_polling()
+# Run bot and FastAPI in parallel
+if __name__ == "__main__":
+    Thread(target=run_api).start()
+    run_bot()
